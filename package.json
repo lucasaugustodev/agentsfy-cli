@@ -1,0 +1,25 @@
+{
+  "name": "agentsfy-cli",
+  "version": "1.0.0",
+  "description": "CLI for Agentsfy — AI Agents as a Service",
+  "type": "module",
+  "bin": {
+    "agentsfy": "./bin/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.ts"
+  },
+  "keywords": ["ai", "agents", "cli", "agentsfy", "smolagents"],
+  "license": "MIT",
+  "dependencies": {
+    "commander": "^13.0.0",
+    "chalk": "^5.3.0",
+    "ora": "^8.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.8.0"
+  }
+}
