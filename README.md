@@ -13,17 +13,30 @@ npm install -g agentsfy-cli
 ## Quick Start
 
 ```bash
-# 1. Set your API token (get it at agentsfy.cc/keys)
-agentsfy auth login ak_your_token_here
+# 1. Login with email + password
+agentsfy auth login
+# Email: you@example.com
+# Password: ********
+# ✓ Logged in as you@example.com
+
+# Or use API key directly (get it at agentsfy.cc/keys)
+agentsfy auth login --token ak_your_key_here
 
 # 2. List your agents
 agentsfy agents list
+#   hub-oracle [claude] — Consulta Oracle database...
+#   code-agent [smol] — Cria sites, apps, scripts...
 
-# 3. Run an agent
-agentsfy agents run orchestrator "cria uma landing page de ebook"
+# 3. Run an agent and get the result
+agentsfy agents run code-agent "cria uma landing page de ebook"
+# ⠋ Running code-agent... (15s)
+# ✓ code-agent completed
+# ─────────────────────────────
+# Landing page criada com sucesso! URL: https://...
+# ─────────────────────────────
 
 # 4. Run a workflow
-agentsfy workflows run bitrix-report --input "deals do mes"
+agentsfy workflows run bitrix-report "deals do mes"
 ```
 
 ## Commands
