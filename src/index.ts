@@ -292,9 +292,11 @@ const files = program.command("files");
 files.command("ls")
   .description("List files in container")
   .argument("[path]", "Directory path", "/home/user")
-  .action(async (path: string) => {
+  .option("-p, --project <id>", "Project ID (use project container)")
+  .action(async (path: string, opts: any) => {
     try {
-      const { files } = await apiFetch(`/api/files?path=${encodeURIComponent(path)}`);
+      const base = opts.project ? `/api/projects/${opts.project}/files` : "/api/files";
+      const { files } = await apiFetch(`${base}?path=${encodeURIComponent(path)}`);
       const filtered = (files || []).filter((f: any) => f.name !== "." && f.name !== "..");
       if (!filtered.length) { console.log(chalk.dim("Empty directory.")); return; }
       for (const f of filtered) {
@@ -305,12 +307,26 @@ files.command("ls")
     } catch (e: any) { console.error(chalk.red("Error:"), e.message); }
   });
 
+files.command("cat")
+  .description("Read a file from container")
+  .argument("<path>", "File path")
+  .option("-p, --project <id>", "Project ID")
+  .action(async (path: string, opts: any) => {
+    try {
+      const base = opts.project ? `/api/projects/${opts.project}/files` : "/api/files";
+      const { content } = await apiFetch(`${base}/download?path=${encodeURIComponent(path)}`);
+      console.log(content || "(empty)");
+    } catch (e: any) { console.error(chalk.red("Error:"), e.message); }
+  });
+
 files.command("exec")
   .description("Execute command in container")
   .argument("<command>", "Shell command")
-  .action(async (command: string) => {
+  .option("-p, --project <id>", "Project ID")
+  .action(async (command: string, opts: any) => {
     try {
-      const result = await apiFetch("/api/files/exec", {
+      const base = opts.project ? `/api/projects/${opts.project}/files` : "/api/files";
+      const result = await apiFetch(`${base}/exec`, {
         method: "POST",
         body: JSON.stringify({ command }),
       });
@@ -341,6 +357,26 @@ projects.command("use")
   .action((slug: string) => {
     saveConfig({ default_project: slug });
     console.log(chalk.green("✓") + ` Default project set to ${chalk.bold(slug)}`);
+  });
+
+// ── Apps ──
+const apps = program.command("apps");
+
+apps.command("list")
+  .description("List deployed apps")
+  .action(async () => {
+    try {
+      const data = await apiFetch("/api/apps");
+      const appsList = data.apps || [];
+      if (!appsList.length) { console.log(chalk.dim("No apps deployed.")); return; }
+      console.log(chalk.bold(`\n  Apps (${appsList.length})\n`));
+      for (const a of appsList) {
+        const status = a.running ? chalk.green("● running") : chalk.red("● stopped");
+        const url = a.subdomain ? chalk.cyan(`https://${a.subdomain}.agentsfy.cc`) : chalk.dim(`port ${a.port}`);
+        console.log(`  ${chalk.bold(a.name)} ${status} ${url}`);
+      }
+      console.log();
+    } catch (e: any) { console.error(chalk.red("Error:"), e.message); }
   });
 
 // ── Webhooks ──
