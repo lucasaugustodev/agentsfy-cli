@@ -6,7 +6,8 @@ const CONFIG_DIR = join(homedir(), ".agentsfy");
 const CONFIG_FILE = join(CONFIG_DIR, "config.json");
 
 interface Config {
-  token: string;
+  token: string;        // JWT or API key — used for all requests
+  api_key?: string;     // API key (ak_...) — used for /api/v1/* endpoints
   api_url: string;
   default_project?: string;
 }

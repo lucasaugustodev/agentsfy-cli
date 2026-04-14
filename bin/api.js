@@ -1,19 +1,23 @@
-import { getToken, getApiUrl } from "./config.js";
+import { getToken, getApiUrl, getConfig } from "./config.js";
 export async function apiFetch(path, options = {}) {
     const token = getToken();
     if (!token)
         throw new Error("Not authenticated. Run: agentsfy auth login");
     const url = `${getApiUrl()}${path}`;
-    const res = await fetch(url, {
+    // For /api/v1/ endpoints, prefer API key if available
+    const config = getConfig();
+    const authToken = (path.includes("/api/v1/") && config.api_key) ? config.api_key : token;
+    let res = await fetch(url, {
         ...options,
         headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`,
+            "Authorization": `Bearer ${authToken}`,
             ...(options.headers || {}),
         },
     });
+    // If 401 and path is /api/v1/, might need different auth format
     if (res.status === 401)
-        throw new Error("Invalid token. Run: agentsfy auth login");
+        throw new Error("Invalid or expired token. Run: agentsfy auth login");
     if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error || `HTTP ${res.status}`);

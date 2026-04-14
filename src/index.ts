@@ -15,11 +15,70 @@ program
 const auth = program.command("auth");
 
 auth.command("login")
-  .description("Authenticate with API token")
-  .argument("<token>", "API token (ak_...)")
-  .action((token: string) => {
-    saveConfig({ token });
-    console.log(chalk.green("✓") + " Token saved to ~/.agentsfy/config.json");
+  .description("Login with email and password")
+  .option("-t, --token <token>", "Login with API key (ak_...) or JWT directly")
+  .action(async (opts: any) => {
+    if (opts.token) {
+      if (opts.token.startsWith("ak_")) {
+        saveConfig({ api_key: opts.token });
+        console.log(chalk.green("✓") + " API key saved (for /api/v1/ endpoints)");
+      } else {
+        saveConfig({ token: opts.token });
+        console.log(chalk.green("✓") + " Token saved");
+      }
+      return;
+    }
+
+    // Interactive login
+    const readline = await import("readline");
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+    const ask = (q: string): Promise<string> => new Promise(r => rl.question(q, r));
+
+    try {
+      const email = await ask(chalk.bold("Email: "));
+      // Hide password input
+      process.stdout.write(chalk.bold("Password: "));
+      const password = await new Promise<string>(resolve => {
+        let pass = "";
+        process.stdin.setRawMode?.(true);
+        process.stdin.resume();
+        process.stdin.on("data", (ch) => {
+          const c = ch.toString();
+          if (c === "\n" || c === "\r") {
+            process.stdin.setRawMode?.(false);
+            process.stdin.pause();
+            console.log();
+            resolve(pass);
+          } else if (c === "\u007F" || c === "\b") {
+            pass = pass.slice(0, -1);
+          } else {
+            pass += c;
+          }
+        });
+      });
+
+      const apiUrl = getConfig().api_url || "https://agentsfy.cc";
+      const res = await fetch(`${apiUrl}/api/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await res.json() as any;
+      if (!res.ok) {
+        console.log(chalk.red("✗") + ` ${data.error || "Login failed"}`);
+        rl.close();
+        return;
+      }
+
+      saveConfig({ token: data.session.access_token });
+      console.log(chalk.green("✓") + ` Logged in as ${chalk.bold(email)}`);
+      console.log(chalk.dim("  Token expires in 1h. Use --token with an API key for permanent auth."));
+      rl.close();
+    } catch (e: any) {
+      console.log(chalk.red("✗") + ` ${e.message}`);
+      rl.close();
+    }
   });
 
 auth.command("token")
@@ -198,8 +257,6 @@ memories.command("list")
   .description("List memories")
   .action(async () => {
     try {
-      const { memories } = await apiFetch("/api/v1/agents"); // reuse agents endpoint format
-      // Actually use the memories endpoint
       const data = await apiFetch("/api/memories");
       const mems = data.memories || [];
       if (!mems.length) { console.log(chalk.dim("No memories.")); return; }
