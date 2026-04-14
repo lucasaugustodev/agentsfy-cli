@@ -311,10 +311,15 @@ files.command("ls")
     .description("List files in container")
     .argument("[path]", "Directory path", "/home/user")
     .option("-p, --project <id>", "Project ID (use project container)")
-    .action(async (path, opts) => {
+    .action(async (dirPath, opts) => {
     try {
+        let p = dirPath;
+        if (p.includes("Program Files/Git/"))
+            p = p.replace(/.*Program Files\/Git/, "");
+        if (!p.startsWith("/"))
+            p = "/" + p;
         const base = opts.project ? `/api/projects/${opts.project}/files` : "/api/files";
-        const { files } = await apiFetch(`${base}?path=${encodeURIComponent(path)}`);
+        const { files } = await apiFetch(`${base}?path=${encodeURIComponent(p)}`);
         const filtered = (files || []).filter((f) => f.name !== "." && f.name !== "..");
         if (!filtered.length) {
             console.log(chalk.dim("Empty directory."));
@@ -334,10 +339,16 @@ files.command("cat")
     .description("Read a file from container")
     .argument("<path>", "File path")
     .option("-p, --project <id>", "Project ID")
-    .action(async (path, opts) => {
+    .action(async (filePath, opts) => {
     try {
+        // Fix MSYS path conversion on Windows (C:/Program Files/Git/home → /home)
+        let p = filePath;
+        if (p.includes("Program Files/Git/"))
+            p = p.replace(/.*Program Files\/Git/, "");
+        if (!p.startsWith("/"))
+            p = "/" + p;
         const base = opts.project ? `/api/projects/${opts.project}/files` : "/api/files";
-        const { content } = await apiFetch(`${base}/download?path=${encodeURIComponent(path)}`);
+        const { content } = await apiFetch(`${base}/download?path=${encodeURIComponent(p)}`);
         console.log(content || "(empty)");
     }
     catch (e) {
